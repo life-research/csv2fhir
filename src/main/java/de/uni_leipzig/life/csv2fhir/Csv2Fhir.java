@@ -43,7 +43,6 @@ public class Csv2Fhir {
             put("Laborbefund.csv", new LaborbefundConverterFactory());
             put("Diagnose.csv", new DiagnoseConverterFactory());
             put("Prozedur.csv", new ProzedurConverterFactory());
-            put("Medikation (2).csv", new MedikationConverterFactory());
             put("Medikation.csv", new MedikationConverterFactory());
             put("Klinische Dokumentation.csv", new KlinischeDokumentationConverterFactory());
         }};
@@ -87,13 +86,14 @@ public class Csv2Fhir {
                                 }
                             }
                         } catch (Exception e) {
-                            System.out.println(e.getMessage());
+                            if (e.getMessage()==null) e.printStackTrace();
+                            else System.out.println(e.getMessage());
                         }
                     }
                 }
             }
         }
-        ctx.newJsonParser().encodeResourceToWriter(bundle, new FileWriter(outputFile));
+        ctx.newJsonParser().setPrettyPrint(true).encodeResourceToWriter(bundle, new FileWriter(outputFile));
     }
 
     private boolean isColumnMissing(Map<String, Integer> map, String[] neededColls) {
