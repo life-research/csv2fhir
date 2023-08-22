@@ -730,12 +730,22 @@ public abstract class Converter {
                 return null;
             }
         }
-        if (dateColumnName instanceof TableColumnIdentifier && ((TableColumnIdentifier) dateColumnName).isMandatory()) {
-            error(dateColumnName + " empty for Record");
-        }
-        return null;
+        return getDataAbsentDate();
+        // TDOD FM an AXS: Warum MUSS Geburtsdatum Pflicht sein? Ich will da ein DataAbent 
+//        if (dateColumnName instanceof TableColumnIdentifier && ((TableColumnIdentifier) dateColumnName).isMandatory()) {
+//            error(dateColumnName + " empty for Record");
+//        }
+//        return null;
     }
 
+    /**
+     * @return an date filled with UNKNOWN data absent reasons
+     */
+    public DateType getDataAbsentDate() {
+        DateType date = new DateType();
+        date.addExtension(DATA_ABSENT_REASON_UNKNOWN);
+        return date;
+    }
     /**
      * @return
      * @throws Exception

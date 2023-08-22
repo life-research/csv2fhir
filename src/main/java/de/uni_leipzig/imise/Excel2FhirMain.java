@@ -75,17 +75,19 @@ public class Excel2FhirMain implements Callable<Integer> {
     public static void main(String[] args) {
         initDirectoriesAndLogger();
 
-        LOG.info("Started...");
         Stopwatch stopwatch = Stopwatch.createStarted();
 
         Excel2FhirMain excel2Fhir = new Excel2FhirMain();
         CommandLine cmd = new CommandLine(excel2Fhir).setExecutionExceptionHandler(new PrintExceptionMessageHandler());
-
-        int exitCode = cmd.execute(args);
-
-        LOG.info("Finished in " + stopwatch.stop());
-
-        System.exit(exitCode);
+        if (args.length == 0) cmd.usage(System.out);
+        else {
+            LOG.info("Started...");
+	        int exitCode = cmd.execute(args);
+	
+	        LOG.info("Finished in " + stopwatch.stop());
+	
+	        System.exit(exitCode);
+        }
     }
 
     /**

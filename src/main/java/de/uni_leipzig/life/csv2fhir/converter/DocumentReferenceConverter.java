@@ -12,14 +12,21 @@ import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
+import java.util.Vector;
 
 import org.apache.commons.csv.CSVRecord;
 import org.hl7.fhir.r4.model.Attachment;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.DocumentReference;
 import org.hl7.fhir.r4.model.DocumentReference.DocumentReferenceContentComponent;
 import org.hl7.fhir.r4.model.DocumentReference.DocumentReferenceContextComponent;
+import org.hl7.fhir.r4.model.DocumentReference.ReferredDocumentStatus;
+import org.hl7.fhir.r4.model.Enumerations.DocumentReferenceStatus;
 import org.hl7.fhir.r4.model.Resource;
 
 import de.uni_leipzig.imise.validate.FHIRValidator;
@@ -28,6 +35,10 @@ import de.uni_leipzig.life.csv2fhir.ConverterOptions;
 import de.uni_leipzig.life.csv2fhir.ConverterResult;
 import de.uni_leipzig.life.csv2fhir.TableColumnIdentifier;
 
+
+/**
+ * @author FAM (24.07.2023)
+ */
 
 public class DocumentReferenceConverter extends Converter {
 
@@ -39,8 +50,10 @@ public class DocumentReferenceConverter extends Converter {
     }
     
     /**  */
-//    String PROFILE = "https://www.medizininformatik-initiative.de/fhir/core/modul-prozedur/StructureDefinition/Procedure";
-    // https://simplifier.net/medizininformatikinitiative-modulprozeduren/prozedur
+    // No official profile available
+    // Base is: http://hl7.org/fhir/R4/documentreference.html
+    // String PROFILE = "https://www.medizininformatik-initiative.de/fhir/core/modul-prozedur/StructureDefinition/Document";
+    // https://simplifier.net/medizininformatikinitiative-modulprozeduren/document
 
     /**
      * @param record
@@ -60,9 +73,57 @@ public class DocumentReferenceConverter extends Converter {
         String encounterId = getEncounterId();
         String id = (isBlank(encounterId) ? getPatientId() : encounterId) + "-D-" + nextId;
         documentReference.setId(id);
-        //documentReference.setMeta(new Meta().addProfile(PROFILE));
+        // No official profile available
+        // documentReference.setMeta(new Meta().addProfile(PROFILE));
         documentReference.setSubject(getPatientReference());
+        // Status of the Reference; always: "This is the current reference for this document."
+        documentReference.setStatus(DocumentReferenceStatus.CURRENT);
+		// Status of the underlying document; always: "final"
+        documentReference.setDocStatus(ReferredDocumentStatus.FINAL);
+		documentReference.setDate(new Date());
+        
+        	/*
+        	 *  Example: 
+        	 *  AD0101	Arztberichte
+        	 *  AD010104	Entlassungsbericht extern
+        	 *  AD010111	Ambulanzbrief
+        	 *  
+        	 *  68609-7 Hospital Letter
+        	 *  18842-5 Discharge summary
+        	 *  
+        	 */
+//        	Coding loinc = createCoding("http://loinc.org", "68609-7");
+//        	CodeableConcept cc = new CodeableConcept();
+//        	loinc.setVersion("2.74");
+//        	loinc.setDisplay("Hospital Letter");
+    	
+        {
+        	Coding kdl = createCoding("http://dvmd.de/fhir/CodeSystem/kdl", "AD0101");
+        	kdl.setVersion("2023");
+        	kdl.setDisplay("Arztberichte");
+            documentReference.setCategory(Collections.singletonList(new CodeableConcept(kdl)));
+        }
+        {
+        	Coding kdl = createCoding("http://dvmd.de/fhir/CodeSystem/kdl", "AD010104");
+        	kdl.setVersion("2023");
+        	kdl.setDisplay("Entlassungsbericht extern");
+            documentReference.setType(new CodeableConcept(kdl));
+        }
+        {
+	    	List<CodeableConcept> cc =  new Vector<CodeableConcept>();
+	        Coding c1 = createCoding("http://terminology.hl7.org/CodeSystem/v3-Confidentiality", "L");
+	    	c1.setVersion("4.0.1");
+	    	c1.setDisplay("low");
+	    	cc.add(new CodeableConcept(c1));
 
+	    	Coding c2 = createCoding("http://terminology.hl7.org/CodeSystem/v3-ActReason", "HTEST");
+	    	c2.setVersion("4.0.1");
+	    	c2.setDisplay("test health data");
+	    	cc.add(new CodeableConcept(c2));
+	    	
+	    	documentReference.setSecurityLabel(cc);
+        }
+    	
         DocumentReferenceContextComponent c = new DocumentReferenceContextComponent();
         c.setEncounter(Collections.singletonList(getEncounterReference()));             
         documentReference.setContext(c);
@@ -95,6 +156,10 @@ public class DocumentReferenceConverter extends Converter {
 		att.setContentType(getContentType(file.toFile()));
 		// optional
 		att.setTitle(file.getFileName().toString());
+		// When attachment was first created
+		// For now: take file creation time
+		// Better (?): date, when document was written 
+		att.setCreation(new Date(((FileTime) Files.getAttribute(file, "creationTime")).toMillis()));
 		return att;		
 	}
 	public static String getContentType(File file) {
